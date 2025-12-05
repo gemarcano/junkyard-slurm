@@ -21,6 +21,8 @@ _mkfs_btrfs := require("mkfs.btrfs")
 _mkbootimg := join(justfile_directory(), "tools", "mkbootimg", "mkbootimg.py")
 [private]
 _bazel := join(justfile_directory(), "kernel", "source", "tools", "bazel")
+[private]
+_make := require("make")
 
 # Variables
 
@@ -59,12 +61,16 @@ export MKBOOTIMG := _mkbootimg
 export MODULE_ORDER := _module_order
 [private]
 export SYSROOT_DIR := _sysroot_dir
+[private]
+export BAZEL := _bazel
 
 # Rules
 
 # Print the list of rules
 default:
     just --list
+
+all android_kernel_branch="android-gs-felix-6.1-android16" size="4GiB" debootstrap_release="stable" root_password="0000" hostname="fold": (clone_kernel_source android_kernel_branch) build_kernel (create_rootfs_image size) (build_rootfs debootstrap_release root_password hostname size) install_apt_packages update_kernel_modules_and_source update_initramfs build_boot_images
 
 # Clone the Google sources for Felix. This can take around one hour!
 [group('kernel')]
@@ -93,7 +99,7 @@ build_kernel: clone_kernel_source
 [working-directory('kernel/source')]
 config_kernel: clone_kernel_source
     cp ./aosp/arch/arm64/configs/gki_defconfig ./gki_defconfig_original
-    tools/bazel run //private/devices/google/felix:kernel_config -- nconfig
+    {{ _bazel }} run //private/devices/google/felix:kernel_config -- nconfig
     diff -up ./gki_defconfig_original aosp/arch/arm64/configs/gki_defconfig; [ $? -eq 0 ] || [ $? -eq 1 ]
     rm ./gki_defconfig_original
     cd aosp; git checkout arch/arm64/configs/gki_defconfig
@@ -107,14 +113,16 @@ create_rootfs_image size="4GiB": unmount_rootfs
 # Mount the btrfs image
 [working-directory('rootfs')]
 mount_rootfs size="4GiB": (create_rootfs_image size)
-    if ! mountpoint -q {{ _sysroot_dir }}; then \
+    @if ! mountpoint -q {{ _sysroot_dir }}; then \
+      echo "Mounting rootfs image to {{ _sysroot_dir }}"; \
       sudo mount {{ _sysroot_img }} {{ _sysroot_dir }}; \
     fi
 
 # Unmount the btrfs image
 [working-directory('rootfs')]
 unmount_rootfs:
-    if mountpoint -q {{ _sysroot_dir }}; then \
+    @if mountpoint -q {{ _sysroot_dir }}; then \
+      echo "Unmounting rootfs image from {{ _sysroot_dir }}"; \
       sudo umount {{ _sysroot_dir }}; \
     fi
 
@@ -127,19 +135,19 @@ clean_rootfs: unmount_rootfs
 # Populate the rootfs image
 [group('rootfs')]
 [working-directory('rootfs')]
-build_rootfs debootstrap_release="stable" root_password="0000" hostname="fold" size="4GiB": mount_rootfs && unmount_rootfs
+build_rootfs debootstrap_release="stable" root_password="0000" hostname="fold" size="4GiB":
     make -C {{ justfile_directory() }} .debootstrap RELEASE={{ debootstrap_release }} ROOT_PW={{ root_password }} HOSTNAME={{ hostname }} SIZE={{ size }}
 
 # Install additional packages into rootfs image
 [group('rootfs')]
 [working-directory('rootfs')]
-install_apt_packages: mount_rootfs && unmount_rootfs
+install_apt_packages:
     make -C {{ justfile_directory() }} .install_packages
 
 # Install kernel and headers into rootfs
 [group('rootfs')]
 [working-directory('rootfs')]
-update_kernel_modules_and_source: build_kernel mount_rootfs && unmount_rootfs
+update_kernel_modules_and_source:
     # TODO: Download factory image and copy firmware
     make -C {{ justfile_directory() }} .install_kernel
 
@@ -154,13 +162,13 @@ update_kernel_modules_and_source: build_kernel mount_rootfs && unmount_rootfs
 # Install initramfs into rootfs
 [group('rootfs')]
 [working-directory('rootfs')]
-update_initramfs: mount_rootfs && unmount_rootfs
+update_initramfs:
     make -C {{ justfile_directory() }} .install_initramfs
 
 # Generate the Android flashable images
 [group('boot')]
 [working-directory('boot')]
-build_boot_images: mount_rootfs && unmount_rootfs
+build_boot_images:
     make -C {{ justfile_directory() }} .build_boot
 
 # Clean everything

@@ -13,6 +13,7 @@ APT_PACKAGES_FILE ?= rootfs/packages.txt
 MODULE_ORDER_PATH ?= rootfs/module_order.txt
 ROOTFS_IMG ?= boot/rootfs.img
 MKBOOTIMG ?= tools/mkbootimg/mkbootimg.py
+BAZEL ?= kernel/source/tools/bazel
 
 all:
 	@echo "This should not be run manually! Use just instead!"
@@ -25,6 +26,7 @@ all:
 	touch $@
 
 .debootstrap: .create_image rootfs/usb_gadget.sh rootfs/00-boot-modules.conf
+	just mount_rootfs
 	# First stage
 	sudo debootstrap --variant=minbase --include=symlinks --arch=arm64 --foreign $(RELEASE) $(SYSROOT_DIR)
 	# Second stage
@@ -38,11 +40,12 @@ all:
 	sudo cp rootfs/usb_gadget.sh $(SYSROOT_DIR)/usr/local/bin/
 	sudo mkdir -p $(SYSROOT_DIR)/etc/modules-load.d/
 	sudo cp rootfs/00-boot-modules.conf $(SYSROOT_DIR)/etc/modules-load.d/
+	just unmount_rootfs
 	# and make sentinel
 	touch $@
 
 .build_kernel: kernel/source/custom_defconfig_mod/BUILD.bazel kernel/source/custom_defconfig_mod/custom_defconfig
-	cd $(KERNEL_SOURCE_DIR); bazel run \
+	cd $(KERNEL_SOURCE_DIR); $(BAZEL) run \
 		--config=use_source_tree_aosp \
 		--config=stamp \
 		--config=felix \
@@ -53,6 +56,7 @@ all:
 	touch $@
 
 .install_packages: .debootstrap rootfs/packages.txt
+	just mount_rootfs
 	# Setup locale
 	sudo systemd-nspawn -D $(SYSROOT_DIR) sh -c \
 		"DEBIAN_FRONTEND=noninteractive apt-get -y install locales apt-utils"
@@ -66,9 +70,11 @@ all:
 		"DEBIAN_FRONTEND=noninteractive apt-get -y install $(APT_PACKAGES)"
 	sudo systemd-nspawn -D ${SYSROOT_DIR} systemctl disable dhcpcd
 	sudo systemd-nspawn -D ${SYSROOT_DIR} systemctl enable NetworkManager
+	just unmount_rootfs
 	touch $@
 
 .install_kernel: .build_kernel .create_image
+	just mount_rootfs
 	sudo mkdir -p $(SYSROOT_DIR)/lib/modules/$(KERNEL_VERSION)
 	sudo cp $(KERNEL_BUILD_DIR)/modules.builtin $(SYSROOT_DIR)/lib/modules/$(KERNEL_VERSION)/
 	sudo cp $(KERNEL_BUILD_DIR)/modules.builtin.modinfo $(SYSROOT_DIR)/lib/modules/$(KERNEL_VERSION)/
@@ -118,9 +124,11 @@ all:
 	csplit $(MODULE_ORDER_PATH) -f "module_order" -b ".%02d.txt" "/ufs_pixel_fips140/+1"
 	mv module_order.00.txt $(MODULE_ORDER_PATH)
 	mv module_order.01.txt 00-boot-modules.conf
+	just unmount_rootfs
 	touch $@
 
 .install_initramfs: .install_kernel rootfs/module_order.txt .install_packages
+	just mount_rootfs
 	sudo mkdir -p "$(SYSROOT_DIR)/etc/dracut.conf.d/"
 	sudo sh -c "echo \"force_drivers+=\\\" $(MODULE_ORDER) \\\"\" > \"$(SYSROOT_DIR)/etc/dracut.conf.d/module_order.conf\""
 	sudo systemd-nspawn -D $(SYSROOT_DIR) dracut \
@@ -130,6 +138,7 @@ all:
 		--force \
 		--add "rescue bash" \
 		--kernel-cmdline "rd.shell"
+	just unmount_rootfs
 	touch $@
 
 .build_boot: .install_initramfs
@@ -141,6 +150,7 @@ all:
 		--pagesize 2048 \
 		--os_version 15.0.0 \
 		--os_patch_level 2025-02
+	just mount_rootfs
 	sudo $(MKBOOTIMG) \
 		--ramdisk_name "" \
 		--vendor_ramdisk_fragment $(INITRAMFS_PATH) \
@@ -150,8 +160,10 @@ all:
 		--pagesize 2048 \
 		--os_version 15.0.0 \
 		--os_patch_level 2025-02
+	just unmount_rootfs
 	touch $@
 
 clean:
+	just unmount_rootfs
 	rm -rf boot/rootfs.img .build_boot .install_initramfs .install_kernel .install_packages .build_kernel .create_image .debootstrap
 	rm -rf boot/boot.img boot/vendor_boot.img boot/rootfs.img
