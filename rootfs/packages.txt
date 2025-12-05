@@ -19,3 +19,4 @@ systemd-resolved
 sudo
 btrfs-progs
 tmux
+avahi-daemon
