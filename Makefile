@@ -38,6 +38,7 @@ all:
 	sudo systemd-nspawn -D $(SYSROOT_DIR) sh -c "echo $(HOSTNAME) > /etc/hostname"
 	# Copy extra files
 	sudo cp rootfs/usb_gadget.sh $(SYSROOT_DIR)/usr/local/bin/
+	chmod +x $(SYSROOT_DIR)/usr/local/bin/usb_gadget.sh
 	sudo mkdir -p $(SYSROOT_DIR)/etc/modules-load.d/
 	sudo cp rootfs/00-boot-modules.conf $(SYSROOT_DIR)/etc/modules-load.d/
 	just unmount_rootfs

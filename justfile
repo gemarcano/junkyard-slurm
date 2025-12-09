@@ -174,4 +174,4 @@ build_boot_images:
 # Clean everything
 clean: clean_kernel clean_rootfs
     # FIXME what else should be cleaned?
-    make {{ justfile_directory() }} -C clean
+    make -C {{ justfile_directory() }} clean
