@@ -38,7 +38,7 @@ all:
 	sudo systemd-nspawn -D $(SYSROOT_DIR) sh -c "echo $(HOSTNAME) > /etc/hostname"
 	# Copy extra files
 	sudo cp rootfs/usb_gadget.sh $(SYSROOT_DIR)/usr/local/bin/
-	chmod +x $(SYSROOT_DIR)/usr/local/bin/usb_gadget.sh
+	sudo chmod +x $(SYSROOT_DIR)/usr/local/bin/usb_gadget.sh
 	sudo mkdir -p $(SYSROOT_DIR)/etc/modules-load.d/
 	sudo cp rootfs/00-boot-modules.conf $(SYSROOT_DIR)/etc/modules-load.d/
 	just unmount_rootfs
@@ -53,7 +53,7 @@ all:
 		--defconfig_fragment=//custom_defconfig_mod:custom_defconfig \
 		//private/devices/google/felix:gs201_felix_dist
 	@echo "Updating kernel version string"
-	strings $(KERNEL_BUILD_DIR)/Image | grep "Linux version" | head -n 1 | awk '{print $$3}' > $(KERNEL_SOURCE_DIR)/kernel_version
+	strings $(KERNEL_BUILD_DIR)/Image | grep "Linux version" | head -n 1 | awk '{print $$3}' > $(KERNEL_SOURCE_DIR)/../kernel_version
 	touch $@
 
 .install_packages: .debootstrap rootfs/packages.txt
@@ -84,13 +84,13 @@ all:
 	@echo "Copying modules"
 	for staging in vendor_dlkm system_dlkm; \
 	do \
-		mkdir -p rootfs/unpack/"$$staging" && \
-		tar \
-		-xvzf $(KERNEL_BUILD_DIR)/"$$staging"_staging_archive.tar.gz \
-		-C rootfs/unpack/"$$staging"; \
+		sudo mkdir -p rootfs/unpack/"$$staging" && \
+		sudo tar \
+			-xvzf $(KERNEL_BUILD_DIR)/"$$staging"_staging_archive.tar.gz \
+			-C rootfs/unpack/"$$staging"; \
 		sudo rsync -avK --ignore-existing --include='*/' --include='*.ko' --exclude='*' rootfs/unpack/"$$staging"/ $(SYSROOT_DIR)/; \
 		sudo sh -c "cat rootfs/unpack/\"$$staging\"/lib/modules/$(KERNEL_VERSION)/modules.order \
-		>> $(SYSROOT_DIR)/lib/modules/$(KERNEL_VERSION)/modules.order"; \
+			>> $(SYSROOT_DIR)/lib/modules/$(KERNEL_VERSION)/modules.order"; \
 	done
 	@echo "Updating System.map"
 	sudo cp $(KERNEL_BUILD_DIR)/System.map $(SYSROOT_DIR)/boot/System.map-$(KERNEL_VERSION)
@@ -101,8 +101,8 @@ all:
 		--filesyms /boot/System.map-$(KERNEL_VERSION) \
 		$(KERNEL_VERSION)
 	@echo "Copying kernel headers"
-	mkdir -p rootfs/unpack/kernel_headers
-	tar \
+	sudo mkdir -p rootfs/unpack/kernel_headers
+	sudo tar \
 		-xvzf $(KERNEL_BUILD_DIR)/kernel-headers.tar.gz \
 		-C rootfs/unpack/kernel_headers
 	sudo cp -r rootfs/unpack/kernel_headers $(SYSROOT_DIR)/usr/src/linux-headers-$(KERNEL_VERSION)
@@ -124,6 +124,8 @@ all:
 		>> $(MODULE_ORDER_PATH)
 	csplit $(MODULE_ORDER_PATH) -f "module_order" -b ".%02d.txt" "/ufs_pixel_fips140/+1"
 	mv module_order.00.txt $(MODULE_ORDER_PATH)
+	sudo sh -c "echo "blacklist bcmdhd4389" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
+	sudo sh -c "echo blacklist exynos_mfc >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
 	mv module_order.01.txt 00-boot-modules.conf
 	just unmount_rootfs
 	touch $@

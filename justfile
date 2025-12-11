@@ -41,7 +41,7 @@ _module_order_path := join(justfile_directory(), "rootfs", "module_order.txt")
 [private]
 _initramfs_path := join(_sysroot_dir, "boot", "initrd.img-" + _kernel_version)
 [private]
-_module_order := replace(read(_module_order_path), "\n", " ")
+_module_order := replace(replace(replace(read(_module_order_path), "\n", " "), "bcmdhd4389", ""), "exynos_mfc", "")
 
 # Environmental variables, used by Makefile mostly
 
