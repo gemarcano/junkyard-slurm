@@ -45,7 +45,7 @@ all:
 	# and make sentinel
 	touch $@
 
-.build_kernel: kernel/source/custom_defconfig_mod/BUILD.bazel kernel/source/custom_defconfig_mod/custom_defconfig
+.build_kernel: kernel/custom_defconfig_mod/BUILD.bazel kernel/custom_defconfig_mod/custom_defconfig
 	cd $(KERNEL_SOURCE_DIR); $(BAZEL) run \
 		--config=use_source_tree_aosp \
 		--config=stamp \
