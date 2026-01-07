@@ -25,7 +25,7 @@ all:
 	sudo mkfs.btrfs $(ROOTFS_IMG)
 	touch $@
 
-.debootstrap: .create_image rootfs/usb_gadget.sh rootfs/00-boot-modules.conf
+.debootstrap: .create_image rootfs/usb_gadget.sh
 	just mount_rootfs
 	# First stage
 	sudo debootstrap --variant=minbase --include=symlinks --arch=arm64 --foreign $(RELEASE) $(SYSROOT_DIR)
@@ -40,7 +40,6 @@ all:
 	sudo cp rootfs/usb_gadget.sh $(SYSROOT_DIR)/usr/local/bin/
 	sudo chmod +x $(SYSROOT_DIR)/usr/local/bin/usb_gadget.sh
 	sudo mkdir -p $(SYSROOT_DIR)/etc/modules-load.d/
-	sudo cp rootfs/00-boot-modules.conf $(SYSROOT_DIR)/etc/modules-load.d/
 	just unmount_rootfs
 	# and make sentinel
 	touch $@
@@ -126,7 +125,7 @@ all:
 	mv module_order.00.txt $(MODULE_ORDER_PATH)
 	sudo sh -c "echo \"blacklist bcmdhd4389\" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
 	sudo sh -c "echo \"blacklist exynos_mfc\" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
-	mv module_order.01.txt 00-boot-modules.conf
+	sudo mv module_order.01.txt $(SYSROOT_DIR)/etc/modules-load.d/00-boot-modules.conf
 	just unmount_rootfs
 	touch $@
 
