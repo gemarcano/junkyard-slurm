@@ -70,6 +70,8 @@ all:
 		"DEBIAN_FRONTEND=noninteractive apt-get -y install $(APT_PACKAGES)"
 	sudo systemd-nspawn -D ${SYSROOT_DIR} systemctl disable dhcpcd
 	sudo systemd-nspawn -D ${SYSROOT_DIR} systemctl enable NetworkManager
+	sudo systemd-nspawn -D $(SYSROOT_DIR) sh -c "nmcli --offline connection add type ethernet con-name default_connection ipv4.method auto autoconnect true > /etc/NetworkManager/system-connections/default_connection.nmconnection"
+	sudo systemd-nspawn -D $(SYSROOT_DIR) sh -c "chmod 600 /etc/NetworkManager/system-connections/default_connection.nmconnection"
 	just unmount_rootfs
 	touch $@
 
