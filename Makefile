@@ -124,8 +124,8 @@ all:
 		>> $(MODULE_ORDER_PATH)
 	csplit $(MODULE_ORDER_PATH) -f "module_order" -b ".%02d.txt" "/ufs_pixel_fips140/+1"
 	mv module_order.00.txt $(MODULE_ORDER_PATH)
-	sudo sh -c "echo "blacklist bcmdhd4389" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
-	sudo sh -c "echo blacklist exynos_mfc >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
+	sudo sh -c "echo \"blacklist bcmdhd4389\" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
+	sudo sh -c "echo \"blacklist exynos_mfc\" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
 	mv module_order.01.txt 00-boot-modules.conf
 	just unmount_rootfs
 	touch $@

@@ -1,6 +1,7 @@
 # Android Kernel
 # kernel/source/
 .build_boot
+.build_kernel
 .create_image
 .debootstrap
 .install_initramfs
