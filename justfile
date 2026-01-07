@@ -82,6 +82,9 @@ clone_kernel_source android_kernel_branch="android-gs-felix-6.1-android16":
       -u https://android.googlesource.com/kernel/manifest \
       -b {{ android_kernel_branch }}
     {{ _repo }} sync -j {{ num_cpus() }}
+    if [ ! -e custom_defconfig_mod ]; then \
+        ln -s ../custom_defconfig_mod ./; \
+    fi
 
 # Clean up the kernel build
 [group('kernel')]
