@@ -1,0 +1,2 @@
+#!/bin/sh
+echo "aoc.bin" > /sys/devices/platform/19000000.aoc/firmware

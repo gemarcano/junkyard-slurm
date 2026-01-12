@@ -1,0 +1,9 @@
+[Unit]
+Description=Load aoc.bin for USB Host support
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/load_aoc_firmware
+
+[Install]
+WantedBy=multi-user.target

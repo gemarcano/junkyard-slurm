@@ -40,8 +40,6 @@ _user := env("USER")
 _module_order_path := join(justfile_directory(), "rootfs", "module_order.txt")
 [private]
 _initramfs_path := join(_sysroot_dir, "boot", "initrd.img-" + _kernel_version)
-[private]
-_module_order := replace(replace(replace(read(_module_order_path), "\n", " "), "bcmdhd4389", ""), "exynos_mfc", "")
 
 # Environmental variables, used by Makefile mostly
 
@@ -58,11 +56,11 @@ export KERNEL_VERSION := _kernel_version
 [private]
 export MKBOOTIMG := _mkbootimg
 [private]
-export MODULE_ORDER := _module_order
-[private]
 export SYSROOT_DIR := _sysroot_dir
 [private]
 export BAZEL := _bazel
+[private]
+export MODULE_ORDER_PATH := _module_order_path
 
 # Rules
 

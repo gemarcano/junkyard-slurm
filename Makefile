@@ -25,7 +25,7 @@ all:
 	sudo mkfs.btrfs $(ROOTFS_IMG)
 	touch $@
 
-.debootstrap: .create_image rootfs/usb_gadget.sh
+.debootstrap: .create_image rootfs/usb_gadget
 	just mount_rootfs
 	# First stage
 	sudo debootstrap --variant=minbase --include=symlinks --arch=arm64 --foreign $(RELEASE) $(SYSROOT_DIR)
@@ -37,9 +37,12 @@ all:
 	# Set hostname
 	sudo systemd-nspawn -D $(SYSROOT_DIR) sh -c "echo $(HOSTNAME) > /etc/hostname"
 	# Copy extra files
-	sudo cp rootfs/usb_gadget.sh $(SYSROOT_DIR)/usr/local/bin/
-	sudo chmod +x $(SYSROOT_DIR)/usr/local/bin/usb_gadget.sh
+	sudo cp rootfs/usb_gadget $(SYSROOT_DIR)/usr/local/sbin/
+	sudo chmod +x $(SYSROOT_DIR)/usr/local/sbin/usb_gadget
 	sudo mkdir -p $(SYSROOT_DIR)/etc/modules-load.d/
+	sudo cp rootfs/load_aoc_firmware $(SYSROOT_DIR)/usr/local/sbin/
+	sudo chmod +x $(SYSROOT_DIR)/usr/local/sbin/load_aoc_firmware
+	sudo cp rootfs/aoc_firmware.service $(SYSROOT_DIR)/etc/systemd/system/
 	just unmount_rootfs
 	# and make sentinel
 	touch $@
@@ -72,6 +75,7 @@ all:
 	sudo systemd-nspawn -D ${SYSROOT_DIR} systemctl enable NetworkManager
 	sudo systemd-nspawn -D $(SYSROOT_DIR) sh -c "nmcli --offline connection add type ethernet con-name default_connection ipv4.method auto autoconnect true > /etc/NetworkManager/system-connections/default_connection.nmconnection"
 	sudo systemd-nspawn -D $(SYSROOT_DIR) sh -c "chmod 600 /etc/NetworkManager/system-connections/default_connection.nmconnection"
+	sudo systemd-nspawn -D $(SYSROOT_DIR) systemctl enable aoc_firmware
 	just unmount_rootfs
 	touch $@
 
@@ -125,8 +129,8 @@ all:
 		>> $(MODULE_ORDER_PATH)
 	csplit $(MODULE_ORDER_PATH) -f "module_order" -b ".%02d.txt" "/ufs_pixel_fips140/+1"
 	mv module_order.00.txt $(MODULE_ORDER_PATH)
-	sudo sh -c "echo \"blacklist bcmdhd4389\" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
-	sudo sh -c "echo \"blacklist exynos_mfc\" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist.conf"
+	sudo sh -c "echo \"blacklist bcmdhd4389\" > $(SYSROOT_DIR)/etc/modprobe.d/blacklist_problematic.conf"
+	sudo sh -c "echo \"blacklist exynos_mfc\" >> $(SYSROOT_DIR)/etc/modprobe.d/blacklist_problematic.conf"
 	sudo mv module_order.01.txt $(SYSROOT_DIR)/etc/modules-load.d/00-boot-modules.conf
 	just unmount_rootfs
 	touch $@

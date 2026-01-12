@@ -1,8 +1,3 @@
-# Ignore every file in this folder
-*
-# Except these
-!.gitignore
-!_enter
-!packages.txt
-!module_order.txt
-!usb_gadget.sh
+sysroot/
+unpack/
+module_order.txt
