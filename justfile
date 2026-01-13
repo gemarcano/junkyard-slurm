@@ -164,6 +164,7 @@ update_kernel_modules_and_source:
 [group('rootfs')]
 [working-directory('rootfs')]
 update_initramfs:
+    export MODULE_ORDER="{{replace(read(_module_order_path), "\n", " ")}}" && \
     make -C {{ justfile_directory() }} .install_initramfs
 
 # Generate the Android flashable images
